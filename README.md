@@ -25,11 +25,19 @@
 
 ## 安装
 
-1. 把本目录放进 DSH profile 的本地插件路径
-2. 在插件管理里启用 `@local/dsh-memory`
-3. 打开 **设置 → 记忆存储** 确认页面加载
+需要 Node 22+（插件用 `node:sqlite`）和 DSH 0.2.1-rc.3（Windows 验证）。
 
-数据默认在插件目录下的 `data/`，可用设置页迁移到别处。
+```bash
+git clone https://github.com/Elysia-Eden-A/dsh-memory-s.git
+cd dsh-memory-s
+node scripts/install.mjs
+```
+
+脚本会把仓库链接进 DSH profile（`@local/dsh-memory`）、登记到 `dsh.profile.bundles`，并校验四个模块都能解析。然后完全退出并重开 DSH，打开 **设置 → 记忆存储** 确认页面。
+
+详细步骤、手动装法、卸载和排查见 [INSTALL.md](INSTALL.md)。
+
+数据默认在插件目录下的 `data/`，可在设置页迁移到别处。
 
 ## 目录结构
 
@@ -38,6 +46,7 @@ index.js            宿主侧：工具、提示注入、HTTP、迁移协调
 client.js           设置页与输入框记忆选择器
 coordinator.mjs     访问准入、排空、待补队列
 migrate-core.mjs    一致副本、指针切换、恢复判断
+scripts/install.mjs 安装脚本（profile 链接、登记、校验）
 test-migrate.mjs    迁移核心的 5 个场景
 test-coordinator.mjs 协调器的 4 个场景
 ```

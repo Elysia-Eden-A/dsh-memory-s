@@ -9,7 +9,7 @@ import { createRequire } from 'node:module';
 import { createCoordinator, eventKey } from './coordinator.mjs';
 
 const requireNode = createRequire(import.meta.url);
-const ROOT = 'D:/Deepseek_work/dsh-memory/_migtest/coord';
+const ROOT = join(process.cwd(), '.tmp', 'coord');
 rmSync(ROOT, { recursive: true, force: true });
 mkdirSync(ROOT, { recursive: true });
 

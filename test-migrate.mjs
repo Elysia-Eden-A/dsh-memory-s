@@ -12,16 +12,36 @@ import { createRequire } from 'node:module';
 import { dbSignature, readJournal, recoverMigration, runMigration } from './migrate-core.mjs';
 
 const requireNode = createRequire(import.meta.url);
-const ROOT = 'D:/Deepseek_work/dsh-memory/_migtest';
-const SOURCE = join(ROOT, 'data-a');
+const ROOT = join(process.cwd(), '.tmp', 'migrate');
 const results = [];
+
+/** 合成一个最小存储：索引库 + 一个会话库 + 一个归档库。 */
+function makeSource(dir) {
+  mkdirSync(join(dir, 'archive'), { recursive: true });
+  const { DatabaseSync } = requireNode('node:sqlite');
+  const index = new DatabaseSync(join(dir, 'index.db'));
+  index.exec('CREATE TABLE facts (id INTEGER PRIMARY KEY, content TEXT)');
+  index.exec("INSERT INTO facts (content) VALUES ('迁移测试事实一'), ('迁移测试事实二')");
+  index.exec('CREATE TABLE sessions (session_id TEXT PRIMARY KEY, message_count INTEGER)');
+  index.exec("INSERT INTO sessions VALUES ('main-1', 2), ('archived-1', 1)");
+  index.exec('CREATE TABLE settings (k TEXT PRIMARY KEY, v TEXT)');
+  index.close();
+  const main = new DatabaseSync(join(dir, '2026_01_01_00_00.db'));
+  main.exec('CREATE TABLE messages (id INTEGER PRIMARY KEY, seq INTEGER, text TEXT)');
+  main.exec("INSERT INTO messages (seq, text) VALUES (1, '你好'), (2, '世界')");
+  main.close();
+  const archived = new DatabaseSync(join(dir, 'archive', '2026_01_02_00_00.db'));
+  archived.exec('CREATE TABLE messages (id INTEGER PRIMARY KEY, seq INTEGER, text TEXT)');
+  archived.exec("INSERT INTO messages (seq, text) VALUES (1, '归档消息')");
+  archived.close();
+}
 
 function fixture(name) {
   const base = join(ROOT, 'runs', name);
   rmSync(base, { recursive: true, force: true });
   mkdirSync(base, { recursive: true });
   const from = join(base, 'from');
-  cpSync(SOURCE, from, { recursive: true });
+  makeSource(from);
   return {
     base,
     from,

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Cross-session long-term memory for the agent: SQLite storage, automatic prompt injection, and a Settings page that reports every conversation database.",
+  "description": "Cross-session long-term memory for DeepSeek Harness: SQLite storage, automatic prompt injection, project-scoped recall, and a Settings page that reports every conversation database.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js"
@@ -11,8 +11,15 @@
   "files": [
     "index.js",
     "client.js",
-    "cordis.patch.yml"
+    "coordinator.mjs",
+    "migrate-core.mjs",
+    "cordis.patch.yml",
+    "scripts"
   ],
+  "scripts": {
+    "test": "node test-migrate.mjs && node test-coordinator.mjs",
+    "install-plugin": "node scripts/install.mjs"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
