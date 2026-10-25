@@ -1,0 +1,13 @@
+// 本地数据与测试现场不入库
+data/
+backup/
+_isolate/
+_migtest/
+_migtest-*/
+*http-test*/
+storage.json
+storage.json.bak
+migration.json
+pending-writes.jsonl
+*.batch
+node_modules/

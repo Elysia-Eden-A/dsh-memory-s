@@ -1,0 +1,26 @@
+{
+  "name": "@local/dsh-memory",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-session long-term memory for the agent: SQLite storage, automatic prompt injection, and a Settings page that reports every conversation database.",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}
