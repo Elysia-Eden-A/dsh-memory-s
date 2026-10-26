@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-memory",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Cross-session long-term memory for DeepSeek Harness: SQLite storage, automatic prompt injection, project-scoped recall, and a Settings page that reports every conversation database.",
