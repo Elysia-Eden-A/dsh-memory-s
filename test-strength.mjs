@@ -118,15 +118,22 @@ await scenario('2 半衰期后取用 = 0.7（不是回到 1）', async () => {
 });
 
 await scenario('3 自动注入不增加强度、不计取用', async () => {
+  // 让它一定出现在提示里：设为常驻，注入就不再依赖候选检索的命中。
+  const { DatabaseSync } = requireNode('node:sqlite');
+  const db = new DatabaseSync(join(dataA, 'index.db'));
+  db.prepare("UPDATE facts SET pinned = 1 WHERE key = 'k1'").run();
+  db.close();
+
   const before = readFact(dataA, 'k1');
   assert.ok(a.section, 'prompt section was not registered');
   const text = String(a.section.text());
-  assert.ok(text.length > 0, 'prompt section rendered empty');
+  assert.match(text, /强度测试记忆/, '测试记忆没有被注入到提示里');
+
   const after = readFact(dataA, 'k1');
   assert.equal(Number(after.strength), Number(before.strength), 'injection changed strength');
   assert.equal(Number(after.use_count), Number(before.use_count), 'injection counted as a use');
   assert.equal(after.last_used_at, before.last_used_at, 'injection touched last_used_at');
-  return `注入后 strength=${Number(after.strength).toFixed(3)} 未变`;
+  return `确实注入；注入后 strength=${Number(after.strength).toFixed(3)} 未变`;
 });
 
 await scenario('4 旧库中新保存仍为 0.6', async () => {
