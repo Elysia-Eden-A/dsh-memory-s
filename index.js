@@ -1080,6 +1080,13 @@ const HALF_LIFE_DAYS = {
   todo: 14,
 };
 
+/**
+ * New memories start below the ceiling so retrieval can actually raise them.
+ * The old default of 1 made every boost a no-op (`MIN(1, 1 + 0.2)`).
+ */
+const INITIAL_STRENGTH = 0.6;
+const STRENGTH_BOOST = 0.2;
+
 function daysSince(stamp) {
   if (!stamp) return 365;
   const then = Date.parse(String(stamp).replace(' ', 'T'));
@@ -1101,13 +1108,27 @@ function salience(row) {
   return Math.min(1, decayed + bonus);
 }
 
-/** Explicit retrieval is the only thing that earns a boost. */
+/**
+ * Explicit retrieval is the only thing that earns a boost. The boost applies to
+ * the *decayed* value, not the stored one: after one half-life a strength of 1
+ * reads 0.5, so retrieval stores 0.7 — not 1. Applying it to the stored value
+ * would let a single read erase any amount of forgetting.
+ */
 function bumpUse(ids) {
   const now = timeStamp();
   for (const id of ids) {
+    const row = store.index.all(
+      'SELECT kind, strength, last_used_at, updated_at FROM facts WHERE id = ?',
+      [id],
+    )[0];
+    if (!row) continue;
+    const halfLife = HALF_LIFE_DAYS[row.kind] ?? 60;
+    const decayed = Number(row.strength ?? INITIAL_STRENGTH)
+      * 0.5 ** (daysSince(row.last_used_at || row.updated_at) / halfLife);
+    const next = Math.min(1, decayed + STRENGTH_BOOST);
     store.index.run(
-      'UPDATE facts SET use_count = use_count + 1, last_used_at = ?, strength = MIN(1, strength + 0.2) WHERE id = ?',
-      [now, id],
+      'UPDATE facts SET use_count = use_count + 1, last_used_at = ?, strength = ? WHERE id = ?',
+      [now, next, id],
     );
   }
 }
@@ -1439,10 +1460,10 @@ const memoryTool = {
       action: {
         type: 'string',
         enum: ['save', 'recall', 'read', 'list', 'forget', 'pin', 'handoff', 'history', 'status'],
-        description: 'save 写入或覆盖；recall 按关键词搜索（多个词用空格分开，会同时查事实、交接和历史对话原文，默认跳过当前对话）；read 按 id 读一条记忆全文；list 按时间列出；forget 删除；pin 设为常驻（每次会话都注入）；handoff 写交接摘要；history 看上一段对话；status 看存储统计。',
+        description: 'save 写入新版本；recall 按关键词搜索（多个词用空格分开，会同时查事实、交接和历史对话原文，默认跳过当前对话）；read 按 id 读一条记忆全文；list 按时间列出；forget 删除；pin 设为常驻（每次会话都注入）；handoff 写交接摘要；history 看上一段对话；status 看存储统计。',
       },
       content: { type: 'string', description: '记忆正文。save 必填，写成能独立理解的完整句子（新会话看不到当前上下文）。' },
-      key: { type: 'string', description: '稳定标识，例如“当前项目”。相同 kind + key 再次 save 会覆盖旧内容。' },
+      key: { type: 'string', description: '稳定标识，例如“当前项目”。相同 kind + key 再次 save 会取代旧版本：新版生效，旧版保留以便追溯。' },
       kind: { type: 'string', enum: ['fact', 'preference', 'decision', 'todo', 'profile'], description: '记忆类别，默认 fact。' },
       importance: { type: 'integer', description: '0-9，越大越靠前，默认 0。' },
       pinned: { type: 'boolean', description: '是否常驻注入，默认 false。常驻条目建议控制在 20 条以内。' },
@@ -1523,9 +1544,12 @@ const memoryTool = {
         return { ok: true, action, detail: `#${previous.id} 内容未变，只更新了元数据（${kind}/${key}）。` };
       }
 
+      // Write the starting strength explicitly: databases created by older
+      // versions have `DEFAULT 1`, and relying on the column default would keep
+      // every new memory pinned at the ceiling.
       store.index.run(
-        'INSERT INTO facts (kind, key, content, importance, pinned, created_at, updated_at, scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [kind, key, content, importance, pinned, now, now, scope],
+        'INSERT INTO facts (kind, key, content, importance, pinned, strength, created_at, updated_at, scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [kind, key, content, importance, pinned, INITIAL_STRENGTH, now, now, scope],
       );
       const id = store.index.all('SELECT last_insert_rowid() AS id')[0]?.id;
       if (previous) {

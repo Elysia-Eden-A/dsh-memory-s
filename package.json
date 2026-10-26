@@ -17,7 +17,7 @@
     "scripts"
   ],
   "scripts": {
-    "test": "node test-migrate.mjs && node test-coordinator.mjs",
+    "test": "node test-migrate.mjs && node test-coordinator.mjs && node test-strength.mjs",
     "install-plugin": "node scripts/install.mjs"
   },
   "dsh": {
